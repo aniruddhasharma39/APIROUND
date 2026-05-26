@@ -7,8 +7,30 @@ const ticketRoutes = require('./routes/tickets');
 
 const app = express();
 
-// --- Middleware ---
-app.use(cors());
+// --- CORS ---
+// Allow requests from local dev and the deployed Vercel frontend.
+// Add any extra origins to the ALLOWED_ORIGINS env var (comma-separated).
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : []),
+];
+
+app.use(cors({
+  origin: (incoming, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!incoming) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(incoming)) return callback(null, true);
+    callback(new Error(`CORS: origin ${incoming} not allowed`));
+  },
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Handle preflight for all routes
+app.options('*', cors());
+
 app.use(express.json());
 
 // --- DB Connection ---
